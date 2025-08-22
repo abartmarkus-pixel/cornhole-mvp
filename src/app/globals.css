@@ -1,26 +1,318 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #1a1a1a;
+  --accent: #2563eb;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --muted: #f8fafc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-source-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-rubik-doodle: var(--font-rubik-doodle);
+  --font-source-code: var(--font-source-code);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-source-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+}
+
+/* Modern card styling */
+.modern-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.modern-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+/* Modern button styling */
+.modern-button {
+  background: var(--foreground);
+  color: var(--background);
+  border: none;
+  border-radius: 50px;
+  padding: 1rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modern-button:hover {
+  background: #374151;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modern-button-outline {
+  background: transparent;
+  color: var(--foreground);
+  border: 2px solid var(--border);
+  border-radius: 50px;
+  padding: 1rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.modern-button-outline:hover {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+  transform: translateY(-1px);
+}
+
+.modern-button-accent {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 1rem 2rem;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.modern-button-accent:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* iPad 1. Generation Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+/* Touch-optimized buttons - minimum 60px */
+.touch-manipulation {
+  touch-action: manipulation;
+  min-height: 60px;
+  min-width: 60px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Landscape mode optimization */
+@media screen and (orientation: landscape) {
+  .landscape-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Modern object selection states */
+.object-empty {
+  border: 3px dashed var(--border);
+  background: var(--card);
+  transition: all 0.3s ease;
+  border-radius: 16px;
+}
+
+.object-empty:hover {
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.object-half {
+  border: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.object-full {
+  border: 3px solid #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.object-bag {
+  border-radius: 16px;
+}
+
+.object-ball {
+  border-radius: 50%;
+}
+
+/* Organic shapes and doodles */
+.organic-decoration {
+  position: relative;
+}
+
+/* Background cornhole board styling */
+.cornhole-background {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(12deg) scale(0.8);
+  opacity: 0.04;
+  z-index: 0;
+  pointer-events: none;
+  max-width: 600px;
+  width: 100%;
+}
+
+/* Add subtle animation to the background */
+@keyframes float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(12deg) scale(0.8) translateY(0px); }
+  50% { transform: translate(-50%, -50%) rotate(12deg) scale(0.8) translateY(-10px); }
+}
+
+@keyframes floatLeft {
+  0%, 100% { transform: translateY(0px) rotate(-5deg); }
+  50% { transform: translateY(-15px) rotate(-8deg); }
+}
+
+@keyframes floatRight {
+  0%, 100% { transform: translateY(0px) rotate(8deg); }
+  50% { transform: translateY(-12px) rotate(12deg); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+
+.cornhole-background {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Doodle decorations */
+.doodle-arrow {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.doodle-arrow-1 {
+  top: 20%;
+  left: 15%;
+  animation: floatLeft 8s ease-in-out infinite;
+}
+
+.doodle-arrow-2 {
+  top: 30%;
+  right: 20%;
+  animation: floatRight 7s ease-in-out infinite;
+}
+
+.doodle-arrow-3 {
+  bottom: 25%;
+  left: 10%;
+  animation: floatSlow 9s ease-in-out infinite;
+}
+
+.doodle-line {
+  position: absolute;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.doodle-line-1 {
+  top: 15%;
+  right: 15%;
+  width: 80px;
+  height: 2px;
+  background: var(--foreground);
+  border-radius: 1px;
+  transform: rotate(-15deg);
+  animation: floatRight 10s ease-in-out infinite;
+}
+
+.doodle-line-2 {
+  bottom: 30%;
+  right: 25%;
+  width: 60px;
+  height: 2px;
+  background: var(--foreground);
+  border-radius: 1px;
+  transform: rotate(25deg);
+  animation: floatLeft 8s ease-in-out infinite;
+}
+
+.doodle-line-3 {
+  top: 40%;
+  left: 8%;
+  width: 50px;
+  height: 2px;
+  background: var(--foreground);
+  border-radius: 1px;
+  transform: rotate(-30deg);
+  animation: floatSlow 12s ease-in-out infinite;
+}
+
+/* Modern header */
+.modern-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Typography improvements */
+.modern-title {
+  font-weight: 800;
+  font-size: 2.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.rubik-doodle-title {
+  font-family: var(--font-rubik-doodle);
+  font-weight: 400;
+  font-size: 3rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.code-subtitle {
+  font-family: var(--font-source-code);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.modern-subtitle {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+/* Prevent zoom on double tap */
+button, 
+.touch-target {
+  touch-action: manipulation;
+}
+
+/* Smooth animations */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
