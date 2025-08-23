@@ -262,19 +262,19 @@ export default function Home() {
       />
       
       <div className="max-w-2xl mx-auto relative z-10 text-center">
-        <h1 className="rubik-doodle-title mb-4">BildungscoRnsulting</h1>
+        <h1 className="rubik-doodle-title mb-4">BildungsCORNsulting</h1>
         <p className="code-subtitle text-gray-700 mb-24">Treffsicher in die Bildungslücke</p>
         
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={() => setCurrentScreen('players')}
-            className="modern-button touch-manipulation py-6 px-12 text-xl font-bold"
+            className="modern-button touch-manipulation py-10 px-20 text-3xl font-bold text-white shadow-2xl"
           >
             Neues Spiel
           </button>
           <button
             onClick={() => setCurrentScreen('stats')}
-            className="bg-white border border-gray-300 text-gray-700 hover:border-gray-400 py-4 px-8 text-lg font-semibold rounded-full touch-manipulation transition-all"
+            className="bg-white border border-gray-300 text-gray-700 py-2 px-6 text-sm font-medium rounded-full touch-manipulation"
           >
             Statistiken
           </button>
@@ -649,12 +649,21 @@ export default function Home() {
         </div>
 
         {/* Submit Button */}
-        <div className="text-center">
+        <div className="text-center flex justify-center items-center gap-4">
           <button
             onClick={submitRound}
             className="modern-button touch-manipulation px-8 py-4 text-lg font-semibold"
           >
             Runde bestätigen
+          </button>
+          <button
+            onClick={() => {
+              setCurrentGame(null);
+              setCurrentScreen('home');
+            }}
+            className="bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 px-4 py-2 text-sm font-medium rounded-full touch-manipulation transition-colors"
+          >
+            Spielabbruch
           </button>
         </div>
       </div>
