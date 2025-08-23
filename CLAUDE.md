@@ -1,6 +1,11 @@
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+BildungsCORNsulting is a cornhole scoring and tournament management application built with modern web technologies.
 
 ## Development Commands
 

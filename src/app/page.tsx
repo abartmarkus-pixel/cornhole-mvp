@@ -32,6 +32,23 @@ export default function Home() {
   // Game config state
   const [targetPoints, setTargetPoints] = useState(21);
   
+  // Delete player state
+  const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
+  
+  const deletePlayer = (playerToDelete: Player) => {
+    // Remove player from players list
+    setPlayers(players.filter(p => p.id !== playerToDelete.id));
+    
+    // Remove player from game history (clean up games where this player participated)
+    const updatedHistory = gameHistory.filter(game => 
+      !game.players.some(p => p.id === playerToDelete.id)
+    );
+    setGameHistory(updatedHistory);
+    
+    // Close popup
+    setPlayerToDelete(null);
+  };
+  
   // Scoring state
   const [currentObjects, setCurrentObjects] = useState<GameObject[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -649,21 +666,12 @@ export default function Home() {
         </div>
 
         {/* Submit Button */}
-        <div className="text-center flex justify-center items-center gap-4">
+        <div className="text-center">
           <button
             onClick={submitRound}
             className="modern-button touch-manipulation px-8 py-4 text-lg font-semibold"
           >
             Runde bestätigen
-          </button>
-          <button
-            onClick={() => {
-              setCurrentGame(null);
-              setCurrentScreen('home');
-            }}
-            className="bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 px-4 py-2 text-sm font-medium rounded-full touch-manipulation transition-colors"
-          >
-            Spielabbruch
           </button>
         </div>
       </div>
@@ -800,6 +808,12 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
+                    <button
+                      onClick={() => setPlayerToDelete(player)}
+                      className="w-1 h-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold text-lg flex items-center justify-center touch-manipulation transition-colors"
+                    >
+                      -
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div className="text-center">
@@ -881,6 +895,34 @@ export default function Home() {
         {currentScreen === 'gameEnd' && renderGameEndScreen()}
         {currentScreen === 'stats' && renderStatsScreen()}
       </main>
+      
+      {/* Delete Player Confirmation Popup */}
+      {playerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-bold text-center mb-4">
+              {playerToDelete.name} löschen?
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              Alle Spiele und Statistiken dieses Spielers werden ebenfalls gelöscht.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPlayerToDelete(null)}
+                className="flex-1 bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 py-3 px-4 font-semibold rounded-lg touch-manipulation transition-colors"
+              >
+                Nein
+              </button>
+              <button
+                onClick={() => deletePlayer(playerToDelete)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-4 font-semibold rounded-lg touch-manipulation transition-colors"
+              >
+                Ja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
