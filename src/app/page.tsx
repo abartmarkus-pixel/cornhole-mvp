@@ -666,12 +666,21 @@ export default function Home() {
         </div>
 
         {/* Submit Button */}
-        <div className="text-center">
+        <div className="text-center flex justify-center items-center gap-4">
           <button
             onClick={submitRound}
             className="modern-button touch-manipulation px-8 py-4 text-lg font-semibold"
           >
             Runde bestätigen
+          </button>
+          <button
+            onClick={() => {
+              setCurrentGame(null);
+              setCurrentScreen('home');
+            }}
+            className="bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 px-4 py-2 text-sm font-medium rounded-full touch-manipulation transition-colors"
+          >
+            Spielabbruch
           </button>
         </div>
       </div>
