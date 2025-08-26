@@ -31,6 +31,7 @@ export default function Home() {
   
   // Game config state
   const [targetPoints, setTargetPoints] = useState(21);
+  const [customTargetPoints, setCustomTargetPoints] = useState('');
   
   // Delete player state
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
@@ -260,6 +261,7 @@ export default function Home() {
     setBags(0);
     setBalls(0);
     setTargetPoints(21);
+    setCustomTargetPoints('');
     setCurrentObjects([]);
     setShowConfirm(false);
     setCurrentScreen('home');
@@ -508,9 +510,12 @@ export default function Home() {
           {[10, 20, 30, 40].map((points) => (
             <button
               key={points}
-              onClick={() => setTargetPoints(points)}
+              onClick={() => {
+                setTargetPoints(points);
+                setCustomTargetPoints('');
+              }}
               className={`py-4 px-6 rounded-2xl font-bold text-lg touch-manipulation transition-all border ${
-                targetPoints === points
+                targetPoints === points && customTargetPoints === ''
                   ? 'bg-green-100 border-gray-200 shadow-lg'
                   : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 modern-card'
               }`}
@@ -518,6 +523,42 @@ export default function Home() {
               {points}
             </button>
           ))}
+        </div>
+        
+        {/* Custom Target Points Input - Same size as buttons */}
+        <div className="flex justify-center">
+          <input
+            type="number"
+            value={customTargetPoints}
+            onChange={(e) => {
+              setCustomTargetPoints(e.target.value);
+              const points = parseInt(e.target.value);
+              if (points > 0 && points <= 999) {
+                setTargetPoints(points);
+              }
+            }}
+            placeholder="Eigene"
+            min="1"
+            max="999"
+            className={`py-4 px-6 rounded-2xl font-bold text-lg touch-manipulation transition-all border text-center focus:outline-none ${
+              customTargetPoints && parseInt(customTargetPoints) > 0
+                ? 'bg-green-100 border-gray-200 shadow-lg'
+                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 modern-card'
+            }`}
+            style={{
+              width: '120px',
+              height: '64px',
+              appearance: 'textfield'
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const points = parseInt(customTargetPoints);
+                if (points > 0 && points <= 999) {
+                  setTargetPoints(points);
+                }
+              }
+            }}
+          />
         </div>
       </div>
 
