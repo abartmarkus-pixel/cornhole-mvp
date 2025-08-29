@@ -22,6 +22,18 @@ export interface Player {
     };
     totalPlayTime: number;
     achievements: string[];
+    objectStats: {
+      bags: {
+        missed: number;
+        onBoard: number;
+        sunk: number;
+      };
+      balls: {
+        missed: number;
+        onBoard: number;
+        sunk: number;
+      };
+    };
   };
 }
 

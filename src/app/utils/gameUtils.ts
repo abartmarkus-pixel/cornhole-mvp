@@ -16,6 +16,18 @@ export const createDefaultPlayer = (name: string): Player => ({
     },
     totalPlayTime: 0,
     achievements: [],
+    objectStats: {
+      bags: {
+        missed: 0,
+        onBoard: 0,
+        sunk: 0,
+      },
+      balls: {
+        missed: 0,
+        onBoard: 0,
+        sunk: 0,
+      },
+    },
   },
 });
 

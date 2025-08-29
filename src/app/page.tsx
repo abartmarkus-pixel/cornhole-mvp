@@ -13,7 +13,7 @@ import {
 } from './utils/gameUtils';
 import confetti from 'canvas-confetti';
 
-type Screen = 'home' | 'players' | 'objects' | 'config' | 'game' | 'stats' | 'gameEnd';
+type Screen = 'home' | 'players' | 'objects' | 'config' | 'game' | 'stats' | 'gameEnd' | 'gameDetails';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -36,6 +36,42 @@ export default function Home() {
   // Delete player state
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
   
+  // Expanded player details state
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
+  
+  // Game details modal state
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  
+  // Hydration fix - ensure client-side rendering
+  const [isHydrated, setIsHydrated] = useState(false);
+  
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+  
+  // Function to get consistent color for a player
+  const getPlayerColor = (playerId: string) => {
+    const colors = [
+      '#3B82F6', // Blue
+      '#EF4444', // Red
+      '#10B981', // Green
+      '#F59E0B', // Amber
+      '#8B5CF6', // Violet
+      '#EC4899', // Pink
+      '#06B6D4', // Cyan
+      '#84CC16', // Lime
+      '#F97316', // Orange
+      '#6366F1', // Indigo
+    ];
+    
+    // Create a simple hash from player ID to ensure consistent colors
+    let hash = 0;
+    for (let i = 0; i < playerId.length; i++) {
+      hash = playerId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const deletePlayer = (playerToDelete: Player) => {
     // Remove player from players list
     setPlayers(players.filter(p => p.id !== playerToDelete.id));
@@ -118,7 +154,7 @@ export default function Home() {
     const objects = generateObjects();
     
     const newGame: Game = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
       players: shuffledPlayers,
       gameConfig: {
         targetPoints,
@@ -214,6 +250,20 @@ export default function Home() {
           // Calculate player's total points and throws from this game
           const playerFinalScore = updatedGame.scores[p.id];
           const playerTotalThrows = updatedGame.rounds.filter(round => round.playerId === p.id).length * (bags + balls);
+          const gameDuration = updatedGame.endTime ? updatedGame.endTime - updatedGame.startTime : 0;
+          
+          // Calculate object stats for this player
+          const playerRounds = updatedGame.rounds.filter(round => round.playerId === p.id);
+          const objectCounts = { bags: { missed: 0, onBoard: 0, sunk: 0 }, balls: { missed: 0, onBoard: 0, sunk: 0 } };
+          
+          playerRounds.forEach(round => {
+            round.objects.forEach(obj => {
+              const type = obj.type === 'bag' ? 'bags' : 'balls';
+              if (obj.state === 0) objectCounts[type].missed++;
+              else if (obj.state === 1) objectCounts[type].onBoard++;
+              else if (obj.state === 2) objectCounts[type].sunk++;
+            });
+          });
           
           // Player participated - update their stats
           const newStats = {
@@ -221,6 +271,19 @@ export default function Home() {
             gamesPlayed: p.stats.gamesPlayed + 1,
             totalPoints: p.stats.totalPoints + playerFinalScore,
             totalThrows: p.stats.totalThrows + playerTotalThrows,
+            totalPlayTime: (p.stats.totalPlayTime || 0) + gameDuration,
+            objectStats: {
+              bags: {
+                missed: (p.stats.objectStats?.bags?.missed || 0) + objectCounts.bags.missed,
+                onBoard: (p.stats.objectStats?.bags?.onBoard || 0) + objectCounts.bags.onBoard,
+                sunk: (p.stats.objectStats?.bags?.sunk || 0) + objectCounts.bags.sunk,
+              },
+              balls: {
+                missed: (p.stats.objectStats?.balls?.missed || 0) + objectCounts.balls.missed,
+                onBoard: (p.stats.objectStats?.balls?.onBoard || 0) + objectCounts.balls.onBoard,
+                sunk: (p.stats.objectStats?.balls?.sunk || 0) + objectCounts.balls.sunk,
+              },
+            },
           };
           
           // Calculate new average
@@ -814,7 +877,7 @@ export default function Home() {
             Neues Spiel
           </button>
           <button
-            onClick={() => setCurrentScreen('stats')}
+            onClick={() => setSelectedGame(currentGame)}
             className="modern-button-outline touch-manipulation px-8 py-4 text-lg font-semibold"
           >
             Statistiken anzeigen
@@ -845,44 +908,299 @@ export default function Home() {
                 return b.stats.totalPoints - a.stats.totalPoints;
               })
               .map((player, index) => (
-                <div key={player.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold bg-gray-100 text-gray-700 border border-gray-300">
-                        #{index + 1}
+                <div key={player.id}>
+                  <div 
+                    className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold bg-gray-100 text-gray-700 border border-gray-300">
+                          #{index + 1}
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg">{player.name}</div>
+                          <div className="text-sm text-gray-600">
+                            {player.stats.wins} Siege von {player.stats.gamesPlayed} Spielen
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-lg">{player.name}</div>
-                        <div className="text-sm text-gray-600">
-                          {player.stats.wins} Siege von {player.stats.gamesPlayed} Spielen
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm text-gray-500">
+                          {expandedPlayerId === player.id ? '▼' : '▶'}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPlayerToDelete(player);
+                          }}
+                          className="w-1 h-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold text-lg flex items-center justify-center touch-manipulation transition-colors"
+                        >
+                          -
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      <div className="text-center">
+                        <div className="font-bold text-lg">{player.stats.totalPoints}</div>
+                        <div className="text-gray-600">Gesamtpunkte</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg">{Math.round((player.stats.totalPlayTime || 0) / 60000)}min</div>
+                        <div className="text-gray-600">Spielzeit gesamt</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg">{player.stats.gamesPlayed}</div>
+                        <div className="text-gray-600">Gespielte Spiele</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg">{player.stats.totalThrows}</div>
+                        <div className="text-gray-600">Würfe gesamt</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Expandable Detail View */}
+                  {expandedPlayerId === player.id && (
+                    <div className="bg-gray-50 border border-gray-200 border-t-0 rounded-b-lg p-4 mb-4">
+                      {/* Combined Bags and Balls Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        {/* Bags */}
+                        <div>
+                          <h5 className="font-semibold text-md mb-3 text-center">Bags</h5>
+                          <div className="flex justify-center gap-4 mb-3">
+                            <div className="text-center">
+                              <img src="/cornholebag-empty.png" alt="Bag Empty" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.bags?.missed || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.bags?.missed || 0) + (player.stats.objectStats?.bags?.onBoard || 0) + (player.stats.objectStats?.bags?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.bags?.missed || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <img src="/cornholebag-half.png" alt="Bag Half" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.bags?.onBoard || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.bags?.missed || 0) + (player.stats.objectStats?.bags?.onBoard || 0) + (player.stats.objectStats?.bags?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.bags?.onBoard || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <img src="/cornholebag-full.png" alt="Bag Full" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.bags?.sunk || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.bags?.missed || 0) + (player.stats.objectStats?.bags?.onBoard || 0) + (player.stats.objectStats?.bags?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.bags?.sunk || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-center text-sm text-gray-600">
+                            Gesamt: {(player.stats.objectStats?.bags?.missed || 0) + (player.stats.objectStats?.bags?.onBoard || 0) + (player.stats.objectStats?.bags?.sunk || 0)} Bag-Würfe
+                          </div>
+                        </div>
+                        
+                        {/* Balls */}
+                        <div>
+                          <h5 className="font-semibold text-md mb-3 text-center">Balls</h5>
+                          <div className="flex justify-center gap-4 mb-3">
+                            <div className="text-center">
+                              <img src="/cornholeball-empty.png" alt="Ball Empty" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.balls?.missed || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.balls?.missed || 0) + (player.stats.objectStats?.balls?.onBoard || 0) + (player.stats.objectStats?.balls?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.balls?.missed || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <img src="/cornholeball-half.png" alt="Ball Half" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.balls?.onBoard || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.balls?.missed || 0) + (player.stats.objectStats?.balls?.onBoard || 0) + (player.stats.objectStats?.balls?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.balls?.onBoard || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <img src="/cornholeball-full.png" alt="Ball Full" className="w-10 h-10 mx-auto mb-1" />
+                              <div className="font-bold text-sm">{player.stats.objectStats?.balls?.sunk || 0}</div>
+                              <div className="text-xs text-gray-600">
+                                {(() => {
+                                  const total = (player.stats.objectStats?.balls?.missed || 0) + (player.stats.objectStats?.balls?.onBoard || 0) + (player.stats.objectStats?.balls?.sunk || 0);
+                                  return total > 0 ? Math.round(((player.stats.objectStats?.balls?.sunk || 0) / total) * 100) + '%' : '0%';
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-center text-sm text-gray-600">
+                            Gesamt: {(player.stats.objectStats?.balls?.missed || 0) + (player.stats.objectStats?.balls?.onBoard || 0) + (player.stats.objectStats?.balls?.sunk || 0)} Ball-Würfe
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Additional Statistics */}
+                      <div className="space-y-4">
+                        {/* Average Points per Game */}
+                        <div>
+                          <h6 className="text-center font-semibold text-sm mb-2 text-gray-700">Durchschn. Punkte pro Spiel</h6>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                              <div className="font-bold text-lg">
+                                {(() => {
+                                  if (player.stats.gamesPlayed === 0) return '0.0';
+                                  const bagPoints = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => {
+                                      const playerRounds = game.rounds.filter(round => round.playerId === player.id);
+                                      const gameBagPoints = playerRounds.reduce((roundSum, round) => {
+                                        return roundSum + round.objects
+                                          .filter(obj => obj.type === 'bag')
+                                          .reduce((objSum, obj) => objSum + (obj.state === 1 ? 1 : obj.state === 2 ? 3 : 0), 0);
+                                      }, 0);
+                                      return sum + gameBagPoints;
+                                    }, 0);
+                                  return (bagPoints / player.stats.gamesPlayed).toFixed(1);
+                                })()}
+                              </div>
+                              <div className="text-gray-600 text-xs">Bags</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-lg">
+                                {(() => {
+                                  if (player.stats.gamesPlayed === 0) return '0.0';
+                                  const ballPoints = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => {
+                                      const playerRounds = game.rounds.filter(round => round.playerId === player.id);
+                                      const gameBallPoints = playerRounds.reduce((roundSum, round) => {
+                                        return roundSum + round.objects
+                                          .filter(obj => obj.type === 'ball')
+                                          .reduce((objSum, obj) => objSum + (obj.state === 1 ? 3 : obj.state === 2 ? 5 : 0), 0);
+                                      }, 0);
+                                      return sum + gameBallPoints;
+                                    }, 0);
+                                  return (ballPoints / player.stats.gamesPlayed).toFixed(1);
+                                })()}
+                              </div>
+                              <div className="text-gray-600 text-xs">Balls</div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Average Points per Round */}
+                        <div>
+                          <h6 className="text-center font-semibold text-sm mb-2 text-gray-700">Durchschn. Punkte pro Runde</h6>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                              <div className="font-bold text-lg">
+                                {(() => {
+                                  const totalRounds = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => sum + game.rounds.filter(round => round.playerId === player.id).length, 0);
+                                  if (totalRounds === 0) return '0.0';
+                                  const bagPoints = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => {
+                                      const playerRounds = game.rounds.filter(round => round.playerId === player.id);
+                                      const gameBagPoints = playerRounds.reduce((roundSum, round) => {
+                                        return roundSum + round.objects
+                                          .filter(obj => obj.type === 'bag')
+                                          .reduce((objSum, obj) => objSum + (obj.state === 1 ? 1 : obj.state === 2 ? 3 : 0), 0);
+                                      }, 0);
+                                      return sum + gameBagPoints;
+                                    }, 0);
+                                  return (bagPoints / totalRounds).toFixed(1);
+                                })()}
+                              </div>
+                              <div className="text-gray-600 text-xs">Bags</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-lg">
+                                {(() => {
+                                  const totalRounds = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => sum + game.rounds.filter(round => round.playerId === player.id).length, 0);
+                                  if (totalRounds === 0) return '0.0';
+                                  const ballPoints = gameHistory
+                                    .filter(game => game.players.some(p => p.id === player.id))
+                                    .reduce((sum, game) => {
+                                      const playerRounds = game.rounds.filter(round => round.playerId === player.id);
+                                      const gameBallPoints = playerRounds.reduce((roundSum, round) => {
+                                        return roundSum + round.objects
+                                          .filter(obj => obj.type === 'ball')
+                                          .reduce((objSum, obj) => objSum + (obj.state === 1 ? 3 : obj.state === 2 ? 5 : 0), 0);
+                                      }, 0);
+                                      return sum + gameBallPoints;
+                                    }, 0);
+                                  return (ballPoints / totalRounds).toFixed(1);
+                                })()}
+                              </div>
+                              <div className="text-gray-600 text-xs">Balls</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Player's Recent Games */}
+                      <div className="border-t border-gray-300 pt-4 mt-4">
+                        <h6 className="text-center font-semibold text-sm mb-3 text-gray-700">{player.name}'s letzte Spiele</h6>
+                        <div className="space-y-2">
+                          {gameHistory
+                            .filter(game => game.players.some(p => p.id === player.id))
+                            .sort((a, b) => (b.endTime || b.startTime) - (a.endTime || a.startTime))
+                            .slice(0, 3)
+                            .map((game) => {
+                              const winner = game.players.find(p => p.id === game.winner);
+                              const duration = game.endTime ? game.endTime - game.startTime : 0;
+                              const playerScore = game.scores[player.id];
+                              const isWinner = game.winner === player.id;
+                              
+                              return (
+                                <div 
+                                  key={game.id} 
+                                  className="bg-white border border-gray-200 rounded-lg p-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors w-full"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSelectedGame(game);
+                                  }}
+                                  style={{ pointerEvents: 'auto' }}
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className={`font-bold ${isWinner ? 'text-green-600' : 'text-gray-700'}`}>
+                                        {isWinner ? '🏆' : ''} {winner?.name} gewinnt mit {game.scores[game.winner || '']} Punkten
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {game.players.map(p => p.name).join(', ')} • 
+                                        {new Date(game.endTime || game.startTime).toLocaleDateString('de-DE')} • 
+                                        {Math.round(duration / (1000 * 60))}min
+                                      </div>
+                                    </div>
+                                    <div className={`font-bold text-sm ${isWinner ? 'text-green-600' : 'text-gray-600'}`}>
+                                      {playerScore} Pkt.
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {gameHistory.filter(game => game.players.some(p => p.id === player.id)).length === 0 && (
+                            <div className="text-center text-xs text-gray-500 py-2">
+                              Noch keine Spiele gespielt
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setPlayerToDelete(player)}
-                      className="w-1 h-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold text-lg flex items-center justify-center touch-manipulation transition-colors"
-                    >
-                      -
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{player.stats.totalPoints}</div>
-                      <div className="text-gray-600">Gesamtpunkte</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{player.stats.averagePointsPerGame.toFixed(1)}</div>
-                      <div className="text-gray-600">⌀ Punkte/Spiel</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{player.stats.gamesPlayed}</div>
-                      <div className="text-gray-600">Gespielte Spiele</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{player.stats.totalThrows}</div>
-                      <div className="text-gray-600">Würfe gesamt</div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ))}
           </div>
@@ -902,7 +1220,16 @@ export default function Home() {
                 const duration = game.endTime ? game.endTime - game.startTime : 0;
                 
                 return (
-                  <div key={game.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                  <div 
+                    key={game.id} 
+                    className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedGame(game);
+                    }}
+                    style={{ pointerEvents: 'auto' }}
+                  >
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="font-bold">
@@ -933,6 +1260,356 @@ export default function Home() {
     </div>
   );
 
+  const renderGameDetailsModal = () => {
+    if (!selectedGame) return null;
+
+    // Calculate object statistics for each player in this game
+    const getPlayerGameStats = (playerId: string) => {
+      const playerRounds = selectedGame.rounds.filter(round => round.playerId === playerId);
+      const stats = { 
+        bags: { missed: 0, onBoard: 0, sunk: 0 }, 
+        balls: { missed: 0, onBoard: 0, sunk: 0 } 
+      };
+      
+      playerRounds.forEach(round => {
+        round.objects.forEach(obj => {
+          const type = obj.type === 'bag' ? 'bags' : 'balls';
+          if (obj.state === 0) stats[type].missed++;
+          else if (obj.state === 1) stats[type].onBoard++;
+          else if (obj.state === 2) stats[type].sunk++;
+        });
+      });
+      
+      return stats;
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div></div>
+              <button
+                onClick={() => setSelectedGame(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Game Info */}
+            <div className="mb-6 text-sm text-gray-600 text-center">
+              <div>Datum: {new Date(selectedGame.endTime || selectedGame.startTime).toLocaleDateString('de-DE')} • 
+              Dauer: {selectedGame.endTime ? Math.round((selectedGame.endTime - selectedGame.startTime) / (1000 * 60)) : 0}min</div>
+            </div>
+
+            {/* Player Statistics */}
+            <div className="space-y-4">
+              {selectedGame.players.map(player => {
+                const gameStats = getPlayerGameStats(player.id);
+                const playerScore = selectedGame.scores[player.id];
+                
+                return (
+                  <div key={player.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="font-bold text-xl">{player.name}</div>
+                        <div className="text-lg font-bold text-green-600">{playerScore} Punkte</div>
+                      </div>
+                    </div>
+                    
+                    {/* Combined Bags and Balls Section - same layout as player details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Bags */}
+                      <div>
+                        <div className="flex justify-center gap-4 mb-3">
+                          <div className="text-center">
+                            <img src="/cornholebag-empty.png" alt="Bag Empty" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.bags.missed}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.bags.missed + gameStats.bags.onBoard + gameStats.bags.sunk;
+                                return total > 0 ? Math.round((gameStats.bags.missed / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <img src="/cornholebag-half.png" alt="Bag Half" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.bags.onBoard}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.bags.missed + gameStats.bags.onBoard + gameStats.bags.sunk;
+                                return total > 0 ? Math.round((gameStats.bags.onBoard / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <img src="/cornholebag-full.png" alt="Bag Full" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.bags.sunk}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.bags.missed + gameStats.bags.onBoard + gameStats.bags.sunk;
+                                return total > 0 ? Math.round((gameStats.bags.sunk / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-center text-sm text-gray-600">
+                          Punkte: {gameStats.bags.onBoard * 1 + gameStats.bags.sunk * 3}
+                        </div>
+                      </div>
+                      
+                      {/* Balls */}
+                      <div>
+                        <div className="flex justify-center gap-4 mb-3">
+                          <div className="text-center">
+                            <img src="/cornholeball-empty.png" alt="Ball Empty" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.balls.missed}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.balls.missed + gameStats.balls.onBoard + gameStats.balls.sunk;
+                                return total > 0 ? Math.round((gameStats.balls.missed / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <img src="/cornholeball-half.png" alt="Ball Half" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.balls.onBoard}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.balls.missed + gameStats.balls.onBoard + gameStats.balls.sunk;
+                                return total > 0 ? Math.round((gameStats.balls.onBoard / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <img src="/cornholeball-full.png" alt="Ball Full" className="w-10 h-10 mx-auto mb-1" />
+                            <div className="font-bold text-sm">{gameStats.balls.sunk}</div>
+                            <div className="text-xs text-gray-600">
+                              {(() => {
+                                const total = gameStats.balls.missed + gameStats.balls.onBoard + gameStats.balls.sunk;
+                                return total > 0 ? Math.round((gameStats.balls.sunk / total) * 100) + '%' : '0%';
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-center text-sm text-gray-600">
+                          Punkte: {gameStats.balls.onBoard * 3 + gameStats.balls.sunk * 5}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Score Progression Chart */}
+            <div className="mb-6 mt-8">
+              <h4 className="text-lg font-bold mb-4 text-center">Punkteverlauf</h4>
+              {(() => {
+                // Calculate cumulative scores for each player over rounds
+                const playerScoreProgression: Record<string, { round: number; totalScore: number }[]> = {};
+                
+                // Initialize with round 0 (starting scores)
+                selectedGame.players.forEach(player => {
+                  playerScoreProgression[player.id] = [{ round: 0, totalScore: 0 }];
+                });
+
+                // Calculate progressive scores round by round
+                const roundsPerPlayer: Record<string, number> = {};
+                selectedGame.players.forEach(player => {
+                  roundsPerPlayer[player.id] = 0;
+                });
+
+                selectedGame.rounds.forEach(roundEntry => {
+                  roundsPerPlayer[roundEntry.playerId]++;
+                  const currentRound = roundsPerPlayer[roundEntry.playerId];
+                  
+                  // Get previous total score for this player
+                  const previousEntry = playerScoreProgression[roundEntry.playerId][playerScoreProgression[roundEntry.playerId].length - 1];
+                  const newTotalScore = previousEntry.totalScore + roundEntry.points;
+                  
+                  playerScoreProgression[roundEntry.playerId].push({
+                    round: currentRound,
+                    totalScore: newTotalScore
+                  });
+                });
+
+                // Find maximum values for chart scaling
+                const maxRounds = Math.max(...Object.values(roundsPerPlayer));
+                const maxScore = Math.max(...Object.values(selectedGame.scores));
+                const chartHeight = 300;
+                const chartWidth = 700; // Increased width for full modal width
+                const padding = 50;
+
+                return (
+                  <div>
+                    <svg width="100%" height={chartHeight + 2 * padding} viewBox={`0 0 ${chartWidth + 2 * padding} ${chartHeight + 2 * padding}`} className="border border-gray-200 rounded">
+                      {/* Grid lines */}
+                      {Array.from({ length: 6 }, (_, i) => {
+                        const y = padding + (i * chartHeight / 5);
+                        const score = Math.round(maxScore * (5 - i) / 5);
+                        return (
+                          <g key={i}>
+                            <line
+                              x1={padding}
+                              y1={y}
+                              x2={chartWidth + padding}
+                              y2={y}
+                              stroke="#f3f4f6"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={padding - 5}
+                              y={y + 3}
+                              textAnchor="end"
+                              fontSize="10"
+                              fill="#6b7280"
+                            >
+                              {score}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* X-axis labels */}
+                      {Array.from({ length: maxRounds + 1 }, (_, i) => {
+                        const x = padding + (i * chartWidth / maxRounds);
+                        return (
+                          <g key={i}>
+                            <line
+                              x1={x}
+                              y1={padding}
+                              x2={x}
+                              y2={chartHeight + padding}
+                              stroke="#f3f4f6"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={x}
+                              y={chartHeight + padding + 15}
+                              textAnchor="middle"
+                              fontSize="10"
+                              fill="#6b7280"
+                            >
+                              {i}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Player lines */}
+                      {selectedGame.players.map((player) => {
+                        const color = getPlayerColor(player.id);
+                        const progression = playerScoreProgression[player.id];
+                        
+                        if (progression.length < 2) return null;
+
+                        let pathData = '';
+                        progression.forEach((point, pointIndex) => {
+                          const x = padding + (point.round * chartWidth / maxRounds);
+                          const y = padding + (chartHeight - (point.totalScore * chartHeight / maxScore));
+                          
+                          if (pointIndex === 0) {
+                            pathData += `M ${x} ${y}`;
+                          } else {
+                            pathData += ` L ${x} ${y}`;
+                          }
+                        });
+
+                        return (
+                          <g key={player.id}>
+                            <path
+                              d={pathData}
+                              stroke={color}
+                              strokeWidth="3"
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            {/* Data points */}
+                            {progression.map((point, pointIndex) => {
+                              const x = padding + (point.round * chartWidth / maxRounds);
+                              const y = padding + (chartHeight - (point.totalScore * chartHeight / maxScore));
+                              return (
+                                <circle
+                                  key={pointIndex}
+                                  cx={x}
+                                  cy={y}
+                                  r="4"
+                                  fill={color}
+                                  stroke="white"
+                                  strokeWidth="2"
+                                />
+                              );
+                            })}
+                          </g>
+                        );
+                      })}
+
+                      {/* Axis labels */}
+                      <text
+                        x={chartWidth / 2 + padding}
+                        y={chartHeight + padding + 35}
+                        textAnchor="middle"
+                        fontSize="12"
+                        fill="#374151"
+                        fontWeight="bold"
+                      >
+                        Runde
+                      </text>
+                      <text
+                        x={15}
+                        y={chartHeight / 2 + padding}
+                        textAnchor="middle"
+                        fontSize="12"
+                        fill="#374151"
+                        fontWeight="bold"
+                        transform={`rotate(-90 15 ${chartHeight / 2 + padding})`}
+                      >
+                        Punkte
+                      </text>
+                    </svg>
+
+                    {/* Legend */}
+                    <div className="flex flex-wrap gap-4 justify-center mt-4">
+                      {selectedGame.players.map(player => (
+                        <div key={player.id} className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-1 rounded"
+                            style={{ backgroundColor: getPlayerColor(player.id) }}
+                          ></div>
+                          <span className="text-sm font-medium">{player.name}</span>
+                          <span className="text-sm text-gray-600">({selectedGame.scores[player.id]} Pkt.)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Close Button */}
+            <div className="text-center mt-6">
+              <button
+                onClick={() => setSelectedGame(null)}
+                className="modern-button-outline touch-manipulation px-6 py-2 text-sm font-semibold"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!isHydrated) {
+    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <div>Loading...</div>
+    </div>;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Main Content */}
@@ -945,6 +1622,9 @@ export default function Home() {
         {currentScreen === 'gameEnd' && renderGameEndScreen()}
         {currentScreen === 'stats' && renderStatsScreen()}
       </main>
+      
+      {/* Game Details Modal */}
+      {selectedGame && renderGameDetailsModal()}
       
       {/* Delete Player Confirmation Popup */}
       {playerToDelete && (
