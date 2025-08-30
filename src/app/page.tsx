@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { Player, GameObject, Game, GameConfig } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
