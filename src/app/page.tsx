@@ -1,12 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Player, GameObject, Game, GameConfig } from './types';
+import { Player, GameObject, Game } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { 
   createDefaultPlayer, 
   calculatePoints, 
-  getObjectStateLabel, 
-  getObjectStateClass, 
   shufflePlayers, 
   checkGameEnd 
 } from './utils/gameUtils';
@@ -87,7 +85,6 @@ export default function Home() {
   
   // Scoring state
   const [currentObjects, setCurrentObjects] = useState<GameObject[]>([]);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   // Load current game from localStorage on mount
   useEffect(() => {
@@ -182,7 +179,6 @@ export default function Home() {
     const newObjects = [...currentObjects];
     newObjects[index].state = ((newObjects[index].state + 1) % 3) as 0 | 1 | 2;
     setCurrentObjects(newObjects);
-    setShowConfirm(false);
   };
 
   const submitRound = () => {
@@ -313,8 +309,7 @@ export default function Home() {
         }
       }
       setCurrentObjects(resetObjects as GameObject[]);
-      setShowConfirm(false);
-    }
+      }
   };
 
   const resetGame = () => {
@@ -325,11 +320,9 @@ export default function Home() {
     setTargetPoints(21);
     setCustomTargetPoints('');
     setCurrentObjects([]);
-    setShowConfirm(false);
     setCurrentScreen('home');
   };
 
-  const currentRoundPoints = calculatePoints(currentObjects);
 
   // Screen Components
   const renderHomeScreen = () => (
@@ -1150,7 +1143,7 @@ export default function Home() {
                       
                       {/* Player's Recent Games */}
                       <div className="border-t border-gray-300 pt-4 mt-4">
-                        <h6 className="text-center font-semibold text-sm mb-3 text-gray-700">{player.name}'s letzte Spiele</h6>
+                        <h6 className="text-center font-semibold text-sm mb-3 text-gray-700">{player.name}&apos;s letzte Spiele</h6>
                         <div className="space-y-2">
                           {gameHistory
                             .filter(game => game.players.some(p => p.id === player.id))
