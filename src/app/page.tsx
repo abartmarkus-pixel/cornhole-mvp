@@ -342,16 +342,8 @@ export default function Home() {
 
   // Screen Components
   const renderHomeScreen = () => (
-    <div className="text-center organic-decoration relative overflow-hidden min-h-screen flex items-center justify-center">
-      
-      {/* Background illustration */}
-      <img 
-        src="/cornholeboard.png" 
-        alt="Cornhole Board" 
-        className="cornhole-background"
-      />
-      
-      <div className="max-w-2xl mx-auto relative z-10 text-center">
+    <div className="text-center organic-decoration min-h-screen flex items-center justify-center">
+      <div className="max-w-2xl mx-auto text-center">
         <h1 className="rubik-doodle-title mb-4">BildungsCORNsulting</h1>
         <p className="code-subtitle text-gray-700 mb-24">Treffsicher in die Bildungslücke</p>
         
@@ -1704,9 +1696,15 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Floating background illustration – visible on all screens */}
+      <img
+        src="/cornholeboard.png"
+        alt="Cornhole Board"
+        className="cornhole-background"
+      />
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto p-4">
+      <main className="max-w-4xl mx-auto p-4 relative z-10">
         {currentScreen === 'home' && renderHomeScreen()}
         {currentScreen === 'players' && renderPlayerScreen()}
         {currentScreen === 'objects' && renderObjectScreen()}
