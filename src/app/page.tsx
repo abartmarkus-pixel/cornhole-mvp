@@ -670,7 +670,7 @@ export default function Home() {
         {/* Live Score */}
         <div className="modern-card">
           <h3 className="rubik-doodle-title text-center mb-4">Live Score</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {sortedPlayers.map((player, index) => {
               // Check if player is truly in first place (not tied)
               const isActualLeader = index === 0 && currentGame.scores[player.id] > currentGame.scores[sortedPlayers[1]?.id] || 0;
@@ -732,8 +732,8 @@ export default function Home() {
 
             return (
               <div key={player.id} className="modern-card">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
                     <div className="font-bold text-lg text-gray-700">
                       {player.name}
                     </div>
@@ -741,16 +741,16 @@ export default function Home() {
                       {playerRoundPoints} Punkte
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {/* Show ALL selected objects for each player */}
                     {Array.from({ length: bags }).map((_, bagIndex) => (
                       <button
                         key={`bag-${bagIndex}`}
                         onClick={() => handleObjectClick(playerIndex * (bags + balls) + bagIndex)}
-                        className="w-12 h-12 touch-manipulation transition-transform hover:scale-105"
+                        className="w-14 h-14 touch-manipulation transition-transform hover:scale-105"
                       >
-                        <img 
-                          src={getImageSrc(currentObjects[playerIndex * (bags + balls) + bagIndex] || {type: 'bag', state: 0})} 
+                        <img
+                          src={getImageSrc(currentObjects[playerIndex * (bags + balls) + bagIndex] || {type: 'bag', state: 0})}
                           alt="bag"
                           className="w-full h-full object-contain"
                         />
@@ -760,10 +760,10 @@ export default function Home() {
                       <button
                         key={`ball-${ballIndex}`}
                         onClick={() => handleObjectClick(playerIndex * (bags + balls) + bags + ballIndex)}
-                        className="w-12 h-12 touch-manipulation transition-transform hover:scale-105"
+                        className="w-14 h-14 touch-manipulation transition-transform hover:scale-105"
                       >
-                        <img 
-                          src={getImageSrc(currentObjects[playerIndex * (bags + balls) + bags + ballIndex] || {type: 'ball', state: 0})} 
+                        <img
+                          src={getImageSrc(currentObjects[playerIndex * (bags + balls) + bags + ballIndex] || {type: 'ball', state: 0})}
                           alt="ball"
                           className="w-full h-full object-contain"
                         />
@@ -777,10 +777,10 @@ export default function Home() {
         </div>
 
         {/* Submit Button */}
-        <div className="text-center flex justify-center items-center gap-4">
+        <div className="text-center flex flex-col sm:flex-row justify-center items-center gap-3">
           <button
             onClick={submitRound}
-            className="modern-button touch-manipulation px-8 py-4 text-lg font-semibold"
+            className="modern-button touch-manipulation px-8 py-4 text-lg font-semibold w-full sm:w-auto"
           >
             Runde bestätigen
           </button>
@@ -789,7 +789,7 @@ export default function Home() {
               setCurrentGame(null);
               setCurrentScreen('home');
             }}
-            className="bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 px-4 py-2 text-sm font-medium rounded-full touch-manipulation transition-colors"
+            className="bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 px-6 py-3 text-sm font-medium rounded-full touch-manipulation transition-colors w-full sm:w-auto"
           >
             Spielabbruch
           </button>
@@ -1016,13 +1016,13 @@ export default function Home() {
                             e.stopPropagation();
                             setPlayerToDelete(player);
                           }}
-                          className="w-1 h-1 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold text-lg flex items-center justify-center touch-manipulation transition-colors"
+                          className="w-8 h-8 rounded-full bg-red-100 hover:bg-red-200 text-red-600 font-bold text-lg flex items-center justify-center touch-manipulation transition-colors"
                         >
                           -
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                       <div className="text-center">
                         <div className="font-bold text-lg">{player.stats.totalPoints}</div>
                         <div className="text-gray-600">Gesamtpunkte</div>
