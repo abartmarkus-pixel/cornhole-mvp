@@ -413,7 +413,7 @@ export default function Home() {
             disabled={!newPlayerName.trim() || players.length >= 20}
             className="modern-button-outline touch-manipulation px-6 py-3 text-base font-semibold"
           >
-            Hinzufügen
+            Add
           </button>
         </div>
       </div>
