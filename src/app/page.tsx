@@ -368,7 +368,7 @@ export default function Home() {
   const renderPlayerScreen = () => (
     <div className="space-y-8 py-8">
       <div className="text-center max-w-2xl mx-auto">
-        <h2 className="rubik-doodle-title mb-8">Choose Your Player</h2>
+        <h2 className="rubik-doodle-title mb-8">Choose Your Players</h2>
       </div>
 
 
@@ -487,11 +487,11 @@ export default function Home() {
                 +
               </button>
             </div>
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2 min-h-[88px] content-start">
               {Array.from({ length: bags }).map((_, i) => (
-                <img 
-                  key={i} 
-                  src="/cornholebag-empty.png" 
+                <img
+                  key={i}
+                  src="/cornholebag-empty.png"
                   alt="Cornhole Bag"
                   className="w-16 h-16 object-contain"
                 />
@@ -522,11 +522,11 @@ export default function Home() {
                 +
               </button>
             </div>
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2 min-h-[88px] content-start">
               {Array.from({ length: balls }).map((_, i) => (
-                <img 
-                  key={i} 
-                  src="/cornholeball-empty.png" 
+                <img
+                  key={i}
+                  src="/cornholeball-empty.png"
                   alt="Cornhole Ball"
                   className="w-16 h-16 object-contain"
                 />
