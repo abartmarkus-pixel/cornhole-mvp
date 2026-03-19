@@ -342,15 +342,15 @@ export default function Home() {
 
   // Screen Components
   const renderHomeScreen = () => (
-    <div className="text-center organic-decoration min-h-screen flex items-center justify-center">
-      <div className="max-w-2xl mx-auto text-center">
-        <h1 className="rubik-doodle-title mb-4">BildungsCORNsulting</h1>
+    <div className="text-center organic-decoration min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-2xl mx-auto text-center w-full">
+        <h1 className="rubik-doodle-title mb-4 break-words">BildungsCORNsulting</h1>
         <p className="code-subtitle text-gray-700 mb-24">Treffsicher in die Bildungslücke</p>
-        
+
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={() => setCurrentScreen('players')}
-            className="modern-button touch-manipulation py-10 px-20 text-3xl font-bold text-white shadow-2xl"
+            className="modern-button touch-manipulation py-6 px-10 sm:py-10 sm:px-20 text-2xl sm:text-3xl font-bold text-white shadow-2xl w-full max-w-xs"
           >
             Neues Spiel
           </button>
@@ -366,7 +366,7 @@ export default function Home() {
   );
 
   const renderPlayerScreen = () => (
-    <div className="space-y-8 py-8">
+    <div className="space-y-8 pt-14 pb-8">
       <div className="text-center max-w-2xl mx-auto">
         <h2 className="rubik-doodle-title mb-8">Choose Your Players</h2>
       </div>
@@ -457,7 +457,7 @@ export default function Home() {
   const renderObjectScreen = () => {
     const totalObjects = bags + balls;
     return (
-      <div className="space-y-6 py-8">
+      <div className="space-y-6 pt-14 pb-8">
         <div className="text-center">
           <h2 className="rubik-doodle-title mb-8">Choose Your Weapons</h2>
         </div>
@@ -561,7 +561,7 @@ export default function Home() {
   };
 
   const renderConfigScreen = () => (
-    <div className="space-y-6 py-8">
+    <div className="space-y-6 pt-14 pb-8">
       <div className="text-center">
         <h2 className="rubik-doodle-title mb-8">It&apos;s The Final Countdown</h2>
       </div>
@@ -963,7 +963,7 @@ export default function Home() {
   };
 
   const renderStatsScreen = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-14">
       <div className="text-center">
         <h2 className="rubik-doodle-title mb-8">Statistiken</h2>
       </div>
