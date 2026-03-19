@@ -65,6 +65,19 @@ export const shufflePlayers = (players: Player[]): Player[] => {
   return [...players].sort(() => Math.random() - 0.5);
 };
 
+export const calculateStreak = (playerId: string, gameHistory: Game[]): number => {
+  const playerGames = [...gameHistory]
+    .sort((a, b) => (b.startTime ?? 0) - (a.startTime ?? 0))
+    .filter(g => g.players.some(p => p.id === playerId));
+
+  let streak = 0;
+  for (const game of playerGames) {
+    if (game.winner === playerId) streak++;
+    else break;
+  }
+  return streak;
+};
+
 export const checkGameEnd = (game: Game): { isFinished: boolean; winner: string | null } => {
   const { scores, gameConfig, players, currentPlayerIndex } = game;
   

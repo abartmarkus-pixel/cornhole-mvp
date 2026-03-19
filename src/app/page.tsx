@@ -2,11 +2,12 @@
 import { useState, useEffect } from 'react';
 import { Player, GameObject, Game } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { 
-  createDefaultPlayer, 
-  calculatePoints, 
-  shufflePlayers, 
-  checkGameEnd 
+import {
+  createDefaultPlayer,
+  calculatePoints,
+  shufflePlayers,
+  checkGameEnd,
+  calculateStreak
 } from './utils/gameUtils';
 import confetti from 'canvas-confetti';
 
@@ -17,28 +18,28 @@ export default function Home() {
   const [players, setPlayers] = useLocalStorage<Player[]>('cornhole-players', []);
   const [gameHistory, setGameHistory] = useLocalStorage<Game[]>('cornhole-history', []);
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
-  
+
   // Player selection state
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
-  
+
   // Object selection state
   const [bags, setBags] = useState(0);
   const [balls, setBalls] = useState(0);
-  
+
   // Game config state
   const [targetPoints, setTargetPoints] = useState(21);
   const [customTargetPoints, setCustomTargetPoints] = useState('');
-  
+
   // Delete player state
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null);
-  
+
   // Expanded player details state
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
-  
+
   // Game details modal state
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  
+
   // Hydration fix - ensure client-side rendering
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -1001,7 +1002,17 @@ export default function Home() {
                           #{index + 1}
                         </div>
                         <div>
-                          <div className="font-bold text-lg">{player.name}</div>
+                          {(() => {
+                            const streak = calculateStreak(player.id, gameHistory);
+                            return (
+                              <div className="font-bold text-lg flex items-center gap-2">
+                                {player.name}
+                                {streak >= 2 && (
+                                  <span className="text-orange-500 font-bold text-sm">🔥 {streak} Siege in Folge</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="text-sm text-gray-600">
                             {player.stats.wins} Siege von {player.stats.gamesPlayed} Spielen
                           </div>
