@@ -1,7 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Player, GameObject, Game } from './types';
-import { useLocalStorage } from './hooks/useLocalStorage';
 import {
   createDefaultPlayer,
   calculatePoints,
@@ -10,13 +9,19 @@ import {
   calculateStreak
 } from './utils/gameUtils';
 import confetti from 'canvas-confetti';
+import { supabase } from '@/lib/supabase';
+
+// NOTE: Supabase has Row Level Security (RLS) enabled by default.
+// For this public app to work, run the following SQL in your Supabase SQL editor:
+//   alter table players disable row level security;
+//   alter table games disable row level security;
 
 type Screen = 'home' | 'players' | 'objects' | 'config' | 'game' | 'stats' | 'gameEnd' | 'gameDetails';
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const [players, setPlayers] = useLocalStorage<Player[]>('cornhole-players', []);
-  const [gameHistory, setGameHistory] = useLocalStorage<Game[]>('cornhole-history', []);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [gameHistory, setGameHistory] = useState<Game[]>([]);
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
 
   // Player selection state
@@ -46,6 +51,50 @@ export default function Home() {
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Load data from Supabase
+  const loadData = useCallback(async () => {
+    const [{ data: playersData }, { data: gamesData }] = await Promise.all([
+      supabase.from('players').select('*'),
+      supabase.from('games').select('*').eq('is_finished', true),
+    ]);
+
+    if (playersData) {
+      setPlayers(playersData as Player[]);
+    }
+
+    if (gamesData) {
+      const mapped: Game[] = gamesData.map((g) => ({
+        id: g.id,
+        players: g.players,
+        gameConfig: g.game_config,
+        rounds: g.rounds,
+        scores: g.scores,
+        currentPlayerIndex: g.current_player_index,
+        currentRound: g.current_round,
+        isFinished: g.is_finished,
+        winner: g.winner,
+        startTime: g.start_time,
+        endTime: g.end_time,
+      }));
+      setGameHistory(mapped);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+
+    // Realtime subscription: reload when players or games change on any device
+    const channel = supabase
+      .channel('db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => loadData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadData]);
 
   // iOS Safari requires AudioContext to be resumed after a user gesture
   useEffect(() => {
@@ -85,16 +134,24 @@ export default function Home() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const deletePlayer = (playerToDelete: Player) => {
-    // Remove player from players list
+  const deletePlayer = async (playerToDelete: Player) => {
+    // Find games that involve this player
+    const gamesToDelete = gameHistory
+      .filter(game => game.players.some(p => p.id === playerToDelete.id))
+      .map(game => game.id);
+
+    // Delete from Supabase
+    await supabase.from('players').delete().eq('id', playerToDelete.id);
+    if (gamesToDelete.length > 0) {
+      await supabase.from('games').delete().in('id', gamesToDelete);
+    }
+
+    // Update local state
     setPlayers(players.filter(p => p.id !== playerToDelete.id));
-    
-    // Remove player from game history (clean up games where this player participated)
-    const updatedHistory = gameHistory.filter(game => 
+    setGameHistory(gameHistory.filter(game =>
       !game.players.some(p => p.id === playerToDelete.id)
-    );
-    setGameHistory(updatedHistory);
-    
+    ));
+
     // Close popup
     setPlayerToDelete(null);
   };
@@ -123,9 +180,10 @@ export default function Home() {
     }
   }, [currentGame]);
 
-  const addPlayer = () => {
+  const addPlayer = async () => {
     if (newPlayerName.trim() && players.length < 20) {
       const newPlayer = createDefaultPlayer(newPlayerName.trim());
+      await supabase.from('players').insert({ id: newPlayer.id, name: newPlayer.name, stats: newPlayer.stats });
       setPlayers([...players, newPlayer]);
       setNewPlayerName('');
     }
@@ -197,7 +255,7 @@ export default function Home() {
     setCurrentObjects(newObjects);
   };
 
-  const submitRound = () => {
+  const submitRound = async () => {
     if (!currentGame || currentGame.isFinished) return;
 
     // Calculate points for ALL players in this round
@@ -256,17 +314,17 @@ export default function Home() {
       const updatedPlayers = players.map(p => {
         // Check if this player participated in the current game
         const participatedInGame = currentGame.players.some(gamePlayer => gamePlayer.id === p.id);
-        
+
         if (participatedInGame) {
           // Calculate player's total points and throws from this game
           const playerFinalScore = updatedGame.scores[p.id];
           const playerTotalThrows = updatedGame.rounds.filter(round => round.playerId === p.id).length * (bags + balls);
           const gameDuration = updatedGame.endTime ? updatedGame.endTime - updatedGame.startTime : 0;
-          
+
           // Calculate object stats for this player
           const playerRounds = updatedGame.rounds.filter(round => round.playerId === p.id);
           const objectCounts = { bags: { missed: 0, onBoard: 0, sunk: 0 }, balls: { missed: 0, onBoard: 0, sunk: 0 } };
-          
+
           playerRounds.forEach(round => {
             round.objects.forEach(obj => {
               const type = obj.type === 'bag' ? 'bags' : 'balls';
@@ -275,7 +333,7 @@ export default function Home() {
               else if (obj.state === 2) objectCounts[type].sunk++;
             });
           });
-          
+
           // Player participated - update their stats
           const newStats = {
             ...p.stats,
@@ -296,15 +354,15 @@ export default function Home() {
               },
             },
           };
-          
+
           // Calculate new average
           newStats.averagePointsPerGame = newStats.totalPoints / newStats.gamesPlayed;
-          
+
           if (p.id === gameEndCheck.winner) {
             // Winner gets win incremented too
             newStats.wins = p.stats.wins + 1;
           }
-          
+
           return { ...p, stats: newStats };
         } else {
           // Player did not participate - no stats change
@@ -312,6 +370,30 @@ export default function Home() {
         }
       });
       setPlayers(updatedPlayers);
+
+      // Persist finished game and updated player stats to Supabase
+      await supabase.from('games').insert({
+        id: updatedGame.id,
+        players: updatedGame.players,
+        game_config: updatedGame.gameConfig,
+        rounds: updatedGame.rounds,
+        scores: updatedGame.scores,
+        current_player_index: updatedGame.currentPlayerIndex,
+        current_round: updatedGame.currentRound,
+        is_finished: updatedGame.isFinished,
+        winner: updatedGame.winner,
+        start_time: updatedGame.startTime,
+        end_time: updatedGame.endTime ?? null,
+      });
+
+      // Upsert updated player stats for participants
+      const participantUpdates = updatedPlayers
+        .filter(p => currentGame.players.some(gamePlayer => gamePlayer.id === p.id))
+        .map(p => ({ id: p.id, name: p.name, stats: p.stats }));
+      if (participantUpdates.length > 0) {
+        await supabase.from('players').upsert(participantUpdates);
+      }
+
       setCurrentScreen('gameEnd');
     } else {
       // Reset ALL objects for next round
