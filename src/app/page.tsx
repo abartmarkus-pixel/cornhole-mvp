@@ -368,7 +368,7 @@ export default function Home() {
   const renderPlayerScreen = () => (
     <div className="space-y-8 py-8">
       <div className="text-center max-w-2xl mx-auto">
-        <h2 className="rubik-doodle-title mb-8">Choose Your Player</h2>
+        <h2 className="rubik-doodle-title mb-8">Choose Your Players</h2>
       </div>
 
 
