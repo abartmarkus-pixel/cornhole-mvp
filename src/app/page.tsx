@@ -41,9 +41,24 @@ export default function Home() {
   
   // Hydration fix - ensure client-side rendering
   const [isHydrated, setIsHydrated] = useState(false);
-  
+
   useEffect(() => {
     setIsHydrated(true);
+  }, []);
+
+  // iOS Safari requires AudioContext to be resumed after a user gesture
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext;
+        const ctx = new AudioContext();
+        ctx.resume().then(() => ctx.close());
+      } catch { /* ignore */ }
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+    };
+    document.addEventListener('touchstart', unlock, { once: true });
+    document.addEventListener('click', unlock, { once: true });
   }, []);
   
   // Function to get consistent color for a player
@@ -786,6 +801,81 @@ export default function Home() {
   // Confetti effect for game end
   useEffect(() => {
     if (currentScreen === 'gameEnd' && currentGame?.isFinished) {
+      // Play fanfare using Web Audio API
+      try {
+        const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext;
+        const ctx = new AudioContext();
+
+        const playNote = (freq: number, startTime: number, duration: number, gain = 0.4) => {
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, startTime);
+          gainNode.gain.setValueAtTime(gain, startTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        };
+
+        const t = ctx.currentTime;
+
+        // Multiple fanfares – one is picked at random
+        const fanfares: Array<(t: number) => void> = [
+          // 1. Klassische Fanfare: C E G C' G C'
+          (t) => {
+            playNote(261.6, t + 0.00, 0.15);
+            playNote(329.6, t + 0.15, 0.15);
+            playNote(392.0, t + 0.30, 0.15);
+            playNote(523.3, t + 0.45, 0.35);
+            playNote(392.0, t + 0.80, 0.15);
+            playNote(523.3, t + 0.95, 0.55);
+          },
+          // 2. Siegestrompete: G G G Eb' (Beethoven-Motiv)
+          (t) => {
+            playNote(392.0, t + 0.00, 0.12);
+            playNote(392.0, t + 0.15, 0.12);
+            playNote(392.0, t + 0.30, 0.12);
+            playNote(311.1, t + 0.45, 0.55);
+            playNote(349.2, t + 1.05, 0.12);
+            playNote(349.2, t + 1.20, 0.12);
+            playNote(349.2, t + 1.35, 0.12);
+            playNote(261.6, t + 1.50, 0.65);
+          },
+          // 3. Fröhlicher Tusch: C G C' E' G' C''
+          (t) => {
+            playNote(261.6, t + 0.00, 0.10);
+            playNote(392.0, t + 0.12, 0.10);
+            playNote(523.3, t + 0.24, 0.10);
+            playNote(659.3, t + 0.36, 0.10);
+            playNote(784.0, t + 0.48, 0.10);
+            playNote(1046.5, t + 0.60, 0.50);
+          },
+          // 4. Mexicali / Olé-Tusch
+          (t) => {
+            playNote(392.0, t + 0.00, 0.10);
+            playNote(392.0, t + 0.12, 0.10);
+            playNote(392.0, t + 0.24, 0.10);
+            playNote(523.3, t + 0.36, 0.25);
+            playNote(392.0, t + 0.65, 0.10);
+            playNote(523.3, t + 0.78, 0.55);
+          },
+          // 5. Aufsteigender Triumph: C D E F G A B C'
+          (t) => {
+            const scale = [261.6, 293.7, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3];
+            scale.forEach((freq, i) => {
+              playNote(freq, t + i * 0.1, i === scale.length - 1 ? 0.6 : 0.12);
+            });
+          },
+        ];
+
+        const chosen = fanfares[Math.floor(Math.random() * fanfares.length)];
+        chosen(t);
+      } catch {
+        // Audio not supported, silently skip
+      }
+
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
