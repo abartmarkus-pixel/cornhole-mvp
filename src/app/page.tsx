@@ -308,70 +308,65 @@ export default function Home() {
     setCurrentGame(updatedGame);
 
     if (gameEndCheck.isFinished) {
-      // Update game history
-      setGameHistory([...gameHistory, updatedGame]);
-      // Update player stats - ONLY for players who participated in this game
+      // Build full game history including the just-finished game
+      const allGames = [...gameHistory, updatedGame];
+      setGameHistory(allGames);
+
+      // Update player stats - recompute from full game history to avoid stale state issues
       const updatedPlayers = players.map(p => {
-        // Check if this player participated in the current game
         const participatedInGame = currentGame.players.some(gamePlayer => gamePlayer.id === p.id);
 
         if (participatedInGame) {
-          // Calculate player's total points and throws from this game
-          const playerFinalScore = updatedGame.scores[p.id];
-          const playerTotalThrows = updatedGame.rounds.filter(round => round.playerId === p.id).length * (bags + balls);
-          const gameDuration = updatedGame.endTime ? updatedGame.endTime - updatedGame.startTime : 0;
+          // Compute all stats from scratch using complete game history
+          const playerGames = allGames.filter(g => g.players.some(gp => gp.id === p.id));
 
-          // Calculate object stats for this player
-          const playerRounds = updatedGame.rounds.filter(round => round.playerId === p.id);
+          const totalPoints = playerGames.reduce((sum, g) => sum + (g.scores[p.id] || 0), 0);
+          const gamesPlayed = playerGames.length;
+          const wins = playerGames.filter(g => g.winner === p.id).length;
+          const totalThrows = playerGames.reduce((sum, g) =>
+            sum + g.rounds.filter(r => r.playerId === p.id).length * (bags + balls), 0);
+          const totalPlayTime = playerGames.reduce((sum, g) =>
+            sum + (g.endTime && g.startTime ? g.endTime - g.startTime : 0), 0);
+
           const objectCounts = { bags: { missed: 0, onBoard: 0, sunk: 0 }, balls: { missed: 0, onBoard: 0, sunk: 0 } };
-
-          playerRounds.forEach(round => {
-            round.objects.forEach(obj => {
-              const type = obj.type === 'bag' ? 'bags' : 'balls';
-              if (obj.state === 0) objectCounts[type].missed++;
-              else if (obj.state === 1) objectCounts[type].onBoard++;
-              else if (obj.state === 2) objectCounts[type].sunk++;
+          playerGames.forEach(g => {
+            g.rounds.filter(r => r.playerId === p.id).forEach(round => {
+              round.objects.forEach(obj => {
+                const type = obj.type === 'bag' ? 'bags' : 'balls';
+                if (obj.state === 0) objectCounts[type].missed++;
+                else if (obj.state === 1) objectCounts[type].onBoard++;
+                else if (obj.state === 2) objectCounts[type].sunk++;
+              });
             });
           });
 
-          // Player participated - update their stats
           const newStats = {
             ...p.stats,
-            gamesPlayed: p.stats.gamesPlayed + 1,
-            totalPoints: p.stats.totalPoints + playerFinalScore,
-            totalThrows: p.stats.totalThrows + playerTotalThrows,
-            totalPlayTime: (p.stats.totalPlayTime || 0) + gameDuration,
-            objectStats: {
-              bags: {
-                missed: (p.stats.objectStats?.bags?.missed || 0) + objectCounts.bags.missed,
-                onBoard: (p.stats.objectStats?.bags?.onBoard || 0) + objectCounts.bags.onBoard,
-                sunk: (p.stats.objectStats?.bags?.sunk || 0) + objectCounts.bags.sunk,
-              },
-              balls: {
-                missed: (p.stats.objectStats?.balls?.missed || 0) + objectCounts.balls.missed,
-                onBoard: (p.stats.objectStats?.balls?.onBoard || 0) + objectCounts.balls.onBoard,
-                sunk: (p.stats.objectStats?.balls?.sunk || 0) + objectCounts.balls.sunk,
-              },
-            },
+            gamesPlayed,
+            wins,
+            totalPoints,
+            totalThrows,
+            totalPlayTime,
+            averagePointsPerGame: gamesPlayed > 0 ? totalPoints / gamesPlayed : 0,
+            objectStats: objectCounts,
           };
-
-          // Calculate new average
-          newStats.averagePointsPerGame = newStats.totalPoints / newStats.gamesPlayed;
-
-          if (p.id === gameEndCheck.winner) {
-            // Winner gets win incremented too
-            newStats.wins = p.stats.wins + 1;
-          }
 
           return { ...p, stats: newStats };
         } else {
-          // Player did not participate - no stats change
           return p;
         }
       });
       setPlayers(updatedPlayers);
 
-      // Persist finished game and updated player stats to Supabase
+      // Upsert player stats BEFORE inserting the game, so that the Realtime
+      // event from games.insert already sees correct player data in Supabase
+      const participantUpdates = updatedPlayers
+        .filter(p => currentGame.players.some(gamePlayer => gamePlayer.id === p.id))
+        .map(p => ({ id: p.id, name: p.name, stats: p.stats }));
+      if (participantUpdates.length > 0) {
+        await supabase.from('players').upsert(participantUpdates);
+      }
+
       await supabase.from('games').insert({
         id: updatedGame.id,
         players: updatedGame.players,
@@ -385,14 +380,6 @@ export default function Home() {
         start_time: updatedGame.startTime,
         end_time: updatedGame.endTime ?? null,
       });
-
-      // Upsert updated player stats for participants
-      const participantUpdates = updatedPlayers
-        .filter(p => currentGame.players.some(gamePlayer => gamePlayer.id === p.id))
-        .map(p => ({ id: p.id, name: p.name, stats: p.stats }));
-      if (participantUpdates.length > 0) {
-        await supabase.from('players').upsert(participantUpdates);
-      }
 
       setCurrentScreen('gameEnd');
     } else {
