@@ -426,7 +426,7 @@ export default function Home() {
   const renderHomeScreen = () => (
     <div className="text-center organic-decoration min-h-screen flex items-center justify-center px-4">
       <div className="max-w-2xl mx-auto text-center w-full">
-        <h1 className="rubik-doodle-title mb-4 break-words">BildungsCORNsulting</h1>
+        <h1 className="rubik-doodle-title mb-4">BildungsCORNsulting</h1>
         <p className="code-subtitle text-gray-700 mb-24">Treffsicher in die Bildungslücke</p>
 
         <div className="flex flex-col items-center gap-4">
